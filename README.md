@@ -1,5 +1,6 @@
-## ParallelKitties
+# ParallelKitties
 
+## Introduction
 The ParallelKitties is a restructured, fully parallel and demonstrative blockchain game based on the source code of CryptoKitties. The purpose of this project is to show how a well-known crypto game can be benefited from Arcology’s revolutionary parallel processing capability.
 
 Comparing to the original CryptoKitties, the ParallelKitties version has following features:

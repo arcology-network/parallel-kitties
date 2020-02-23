@@ -14,6 +14,7 @@ Arcology is compatible with EVM, all Ethereum smart contracts running on Ethereu
 
 ## Major Differences 
 The original EVM doesn’t have any built-in mechanism to prevent and recovery state inconsistency for Solidity developers to use. Neither Solidity nor EVM is designed for concurrent use, running original version CryptoKitties directly in the multiple parallel EVM instances will inevitably cause serious problems.
+
 To fully utilize Arcology’s concurrency control framework, we made some necessary modifications to the original CK Core code. The majority of changes were related to data structures. Basically, we replaced all the data containers used in original CK code with Archology concurrent containers to allow concurrent modifications of elements they hold. We made no changes to the program architecture, internal logics or calling sequence of original CK code. 
 
 ## Concurrent Containers

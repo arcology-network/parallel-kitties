@@ -28,7 +28,7 @@ For blockchains, the same set of transactions must be processed by different nod
 Arcology has a concurrency framework that is both “thread-safe” and deterministic. 
 
 ## Concurrent Containers
-Concurrent containers are a key part of concurrency framework that are widely used in ParallelKitties to enable parallelism. The internal state within consistency always guaranteed.  For those who know other mainstream programming languages may find this concept familiar. Java has a collection of concurrent containers available under java.util.concurrent. Those concurrent containers are designed to be thread safe. 
+Concurrent containers are a key part of Arcology’s concurrency framework extensively used in ParallelKitties to enable parallelism. The internal state within consistency always guaranteed.  For those who know other mainstream programming languages may find this concept familiar. Java has a collection of concurrent containers available under java.util.concurrent. Those concurrent containers are designed to be thread safe. 
 
 Concurrent containers in Arcology share some similarities with others but Arcology offers more. Arcology’s concurrent containers are both thread-safe and deterministic.   All the data elements in the concurrent containers are under protection of Archology, access may cause unexpected consequences will be detected and prevented.
 

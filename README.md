@@ -1,3 +1,4 @@
+# ParallelKitties
 ## Introduction
 The ParallelKitties is a restructured, fully parallel and demonstrative blockchain game based on the source code of CryptoKitties. 
 The purpose of this project is to show how a well-known crypto game can be benefited from Arcology’s revolutionary parallel processing capability. Comparing with the original CryptoKitties, the ParallelKitties version has following features:
@@ -33,3 +34,32 @@ Concurrent containers are a key part of Arcology’s concurrency framework exten
 Concurrent containers in Arcology share some similarities with others but Arcology offers more. Arcology’s concurrent containers are both thread-safe and deterministic.   All the data elements in the concurrent containers are under protection of Archology, access may cause unexpected consequences will be detected and prevented.
 
 For detailed information on concurrent containers and the whole Arcology concurrency framework, please check out the link www.arcology.network/technical/developers-guide/
+
+
+# Installation
+
+## Setup a testnet
+ParallelKitties uses a lot unique features of Arcology’s Concurrency framework and it only works on Arcology network.  Arcology installation information is available here [link]
+
+## Prepare ParallelKitties
+
+### Compiling source code
+ParallelKitties source code can be compiled into EVM Bytecode using standard Solidity compiler. 
+
+### Using binary 
+Apart from compile the source code, you could download a pre-compiled version directly from [link]
+
+## Deploy on the Testnet
+
+
+## Using Ammolite
+ParallelKitties is a demonstrative game, so it doesn’t come with a browser-based interface for end users. For now, all dApps deployed on Arcology including ParallelKitties rely on a tool called Ammolite to interact with Arcology nodes. 
+Ammolite an automated-test framework designed to send large volume of transactions into Arcology. Developers can write their own scripts to simulate large volume of user interactions with the network. 
+The current version of Ammolite comes with a plugin to help testing the ParallelKitties. Please refer to  [link]. for more information. 
+
+## Running ParallelKitties
+
+## Sending transactions 
+
+## Monitor the network 
+

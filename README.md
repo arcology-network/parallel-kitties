@@ -1,65 +1,75 @@
-# ParallelKitties
-## Introduction
-The ParallelKitties is a restructured, fully parallel and demonstrative blockchain game based on the source code of CryptoKitties. 
-The purpose of this project is to show how a well-known crypto game can be benefited from Arcology’s revolutionary parallel processing capability. Comparing with the original CryptoKitties, the ParallelKitties version has following features:
+## ParallelKitties
 
-*	Functionally compatible with CryptoKitties
-*	ParallelKitties used Arcology’s concurrency framework
-*	ParallelKitties work on Arcology only
-*	Calls to the ParallelKitties can be executed in parallel without causing conflicts
-*	Results are guaranteed to be deterministic
+### Deploy
 
-## EVM Compatibility
-Arcology is compatible with EVM, all Ethereum smart contracts running on Ethereum can work on Arcology without modification.  
-The original Solidity and EVM lack concurrency support, the ParallelKitties used some concurrency features which are only available on Arcology. Smart contracts developed for Arcology also work on Ethereum as long as no  concurrency features are used.
+**Usage**
 
-## Major Differences 
-The original EVM doesn’t have any built-in mechanism to prevent and recovery state inconsistency. Neither Solidity nor EVM is designed for concurrent use, running original version CryptoKitties directly in the multiple parallel EVM instances will inevitably cause serious problems.
+Generate N accounts for the test with accgen.py:
 
-To fully utilize Arcology’s concurrency control framework, we made some necessary modifications to the original CK Core code. The majority of changes were related to data structures. Basically, we replaced all the data containers in original CK code with Archology concurrent containers to allow concurrent modifications of elements they hold. We made no changes to the program architecture, internal logics or calling sequence of original CK code. 
+```shell
+$python3 accgen.py <N>
+```
 
+Run the deploy script:
 
-## Background
-Parallelism is the solution to scalability issue. Proposed solutions like sharding, sidechain can all be classified as some sort of parallelism. The challenge is there must be a mechanism to maintain consistency, while allowing multiple program instances to access some shared resources concurrently. 
+python3 deploy.py \<config-file> \<account-file>
 
-In centralized systems,  a typical solution to this problem is by employing some synchronization mechanisms like mutex.  
-Conventional synchronization mechanisms are only thread-safe but not deterministic. The order to which the resources are accessed isn’t taken into account at all. Different access order will lead to different execution results in many cases, which isn’t a problem for centralized systems. 
+* **config-file**: The name of the config file;
+* **account-file**: The name of the account file.
 
-For blockchains, the same set of transactions must be processed by different nodes repeatedly. The end states after the executions must be identical across multiple nodes to reach a consensus. This is a key feature for blockchain platforms. 
-Arcology has a concurrency framework that is both “thread-safe” and deterministic. 
+**Format of the config file**
 
-## Concurrent Containers
-Concurrent containers are a key part of Arcology’s concurrency framework extensively used in ParallelKitties to enable parallelism. The internal state within consistency always guaranteed.  For those who know other mainstream programming languages may find this concept familiar. Java has a collection of concurrent containers available under java.util.concurrent. Those concurrent containers are designed to be thread safe. 
+```YAML
+frontend: http://localhost:8080
+gen0_count: 1000
+test_case_weights:
+    sale_auction: 1
+    siring_auction_creator: 1
+    siring_auction_bidder: 1
+    kitty_raiser: 1
+    kitties_exchanger: 1
+```
 
-Concurrent containers in Arcology share some similarities with others but Arcology offers more. Arcology’s concurrent containers are both thread-safe and deterministic.   All the data elements in the concurrent containers are under protection of Archology, access may cause unexpected consequences will be detected and prevented.
+* **frontend**: The service url of the frontend service;
+* **gen0_count**: The number of the gen0 kitties;
+* **test_case_weights**: The weight of each test case.
 
-For detailed information on concurrent containers and the whole Arcology concurrency framework, please check out the link www.arcology.network/technical/developers-guide/
+Example:
 
+```shell
+$ python3 deploy.py config.yaml accounts.txt
+Deploy ParallelKitties complete.
+python3 init_gen0.py http://localhost:8080 1000 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb cfac4f5fa828072ba8313b0686f02f576fa0fc8caba947569429e88968577865
+python3 kitty_miner.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 42e30ad7f9b7ccb4c19d14277c76c15fddc461548be3102dcb4bbfd7b602c07a
+python3 sale_auction_creator_and_bidder.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb acc1.txt
+python3 siring_auction_creator.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb 0x77b35dce39fb045ae99bbd7105fa2e89c60d36cf acc2.txt
+python3 siring_auction_bidder.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb 0x77b35dce39fb045ae99bbd7105fa2e89c60d36cf acc3.txt
+python3 kitty_raiser.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb acc4.txt
+python3 kitties_exchanger.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb acc5.txt
+```
 
-# Installation
+Init gen0 kitties with init_gen0.py:
 
-## Setup a testnet
-ParallelKitties uses a lot unique features of Arcology’s Concurrency framework and it only works on Arcology network.  Arcology installation information is available here [link]
+```shell
+$ python3 init_gen0.py http://localhost:8080 1000 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb
+```
 
-## Prepare ParallelKitties
+Run kitty_miner.py before starting all the other tests:
 
-### Compiling source code
-ParallelKitties source code can be compiled into EVM Bytecode using standard Solidity compiler. 
+```shell
+$ python3 kitty_miner.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 42e30ad7f9b7ccb4c19d14277c76c15fddc461548be3102dcb4bbfd7b602c07a
+```
 
-### Using binary 
-Apart from compile the source code, you could download a pre-compiled version directly from [link]
+### Run the test
 
-## Deploy on the Testnet
+Copy the output of deploy.py to terminal to run the tests:
 
+```shell
+python3 sale_auction_creator_and_bidder.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb acc1.txt
+python3 siring_auction_creator.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb 0x77b35dce39fb045ae99bbd7105fa2e89c60d36cf acc2.txt
+python3 siring_auction_bidder.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb 0x77b35dce39fb045ae99bbd7105fa2e89c60d36cf acc3.txt
+python3 kitty_raiser.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb acc4.txt
+python3 kitties_exchanger.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 0x1af90c9395ad05e29f8698d6a118bbc47e6af7cb acc5.txt
+```
 
-## Using Ammolite
-ParallelKitties is a demonstrative game, so it doesn’t come with a browser-based interface for end users. For now, all dApps deployed on Arcology including ParallelKitties rely on a tool called Ammolite to interact with Arcology nodes. 
-Ammolite an automated-test framework designed to send large volume of transactions into Arcology. Developers can write their own scripts to simulate large volume of user interactions with the network. 
-The current version of Ammolite comes with a plugin to help testing the ParallelKitties. Please refer to  [link]. for more information. 
-
-## Running ParallelKitties
-
-## Sending transactions 
-
-## Monitor the network 
-
+> Run each script in a separate terminal, press Ctrl+C to stop the test.

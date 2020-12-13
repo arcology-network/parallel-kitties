@@ -1,4 +1,5 @@
 ## ParallelKitties
+Parallel-Kitties is parallelized version using tools in Arcology concurrency framework from the original CryptoKitties core developed by  Dapper Labs (https://www.dapperlabs.com).  The original CryptoKitties could be downloaded from here (). This demonstration is to show how a typical, real-world application written in Solidity with Arcology concurrency control may achieve dramatic performance gains when deployed on Arcology platform.  As of today, the Parallel-Kitties only works on Arcology network. 
 
 ### Deploy
 

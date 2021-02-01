@@ -34,6 +34,7 @@ def buy(accounts):
     targets = []
     for i in ret_set:
         targets.append(i)
+    #print(targets)
 
     txs = {}
     hashes = []
@@ -47,55 +48,86 @@ def buy(accounts):
             txs[tx_hash] = raw_tx
             hashes.append(tx_hash)
     cli.sendTransactions(txs)
+    print('buy {} kitties'.format(len(txs)))
 
     # Remove from saleauctions.
     idsToRemove = []
+    idsToReturn = []
     receipts = wait_for_receipts(cli, hashes)
+    ok = 0
+    fail = 0
     for i in range(len(hashes)):
         receipt = receipts[hashes[i]]
         if receipt['status'] != 1:
+            #print(receipt)
+            fail += 1
+            idsToReturn.append(None)
             continue
         processed_receipt = sale_auction_contract.processReceipt(receipt)
         if 'AuctionSuccessful' in processed_receipt:
+            ok += 1
             idsToRemove.append(processed_receipt['AuctionSuccessful']['tokenId'])
+            idsToReturn.append(processed_receipt['AuctionSuccessful']['tokenId'])
+        else:
+            fail += 1
+    print('ok = {}, fail = {}'.format(ok, fail))
 
     db.saleauctions.remove({'id': {'$in': idsToRemove}})
-    return idsToRemove
+    return idsToReturn
 
-def breed(accounts, kitties):
+def breed(accounts, kitties, n):
     # Breed.
     txs = {}
     hashes = []
+    m = []
     for i in range(len(accounts)):
+        if kitties[i*2] is None or kitties[i*2+1] is None:
+            continue
         raw_tx, tx_hash = accounts[i].sign(kitty_core_contract.functions.breedWithAuto(kitties[i*2], kitties[i*2+1]).buildTransaction({
             'value': int(1e15),
             'gas': 1000000000,
             'gasPrice': 1,
+            'nonce': n,
         }))
         txs[tx_hash] = raw_tx
         hashes.append(tx_hash)
+        m.append(kitties[i*2])
     cli.sendTransactions(txs)
+    print('txs = {}'.format(len(txs)))
 
     receipts = wait_for_receipts(cli, hashes)
     matrons = []
     for i in range(len(hashes)):
         receipt = receipts[hashes[i]]
+        #print(receipt)
         if receipt['status'] != 1:
+            print(hashes[i].hex())
             continue
-        matrons.append(kitties[i*2])
+        matrons.append(m[i])
+        if i == 0:
+            print(hashes[0].hex())
+    print('ok = {}'.format(len(matrons)))
 
     # Wait for the birth of children.
+    found = 0
+    notfound = len(matrons)
     for matron in matrons:
+        #print('try {}'.format(matron))
         while True:
             item = db.newborns.find_one({'matronId': matron})
             if item is not None:
                 db.newborns.delete_one({'matronId': matron})
+                #found += 1
+                #notfound -= 1
+                #print('found = {}, not found = {}'.format(found, notfound))
                 break
             time.sleep(1)
 
 users = init_accounts(private_key)
 kitties = buy(users)
-print(kitties)
+#print(kitties)
+n = 1
 while True:
-    breed(users, kitties)
-    time.sleep(10)
+    breed(users, kitties, n)
+    n += 1
+    #time.sleep(10)

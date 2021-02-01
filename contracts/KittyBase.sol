@@ -21,6 +21,9 @@ contract KittyBase is KittyAccessControl, Seriality {
     ///  ownership is assigned, including births.
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
 
+    // For test.
+    event BalanceOf(address a, uint256 balance);
+
     /*** DATA TYPES ***/
 
     /// @dev The main Kitty struct. Every cat in CryptoKitties is represented by a copy
@@ -74,25 +77,43 @@ contract KittyBase is KittyAccessControl, Seriality {
     ///  is bred, encouraging owners not to just keep breeding the same cat over
     ///  and over again. Caps out at one week (a cat can breed an unbounded number
     ///  of times, and the maximum cooldown is always seven days).
+    // uint32[14] public cooldowns = [
+    //     uint32(1 minutes),
+    //     uint32(2 minutes),
+    //     uint32(5 minutes),
+    //     uint32(10 minutes),
+    //     uint32(30 minutes),
+    //     uint32(1 hours),
+    //     uint32(2 hours),
+    //     uint32(4 hours),
+    //     uint32(8 hours),
+    //     uint32(16 hours),
+    //     uint32(1 days),
+    //     uint32(2 days),
+    //     uint32(4 days),
+    //     uint32(7 days)
+    // ];
     uint32[14] public cooldowns = [
-        uint32(1 minutes),
-        uint32(2 minutes),
-        uint32(5 minutes),
-        uint32(10 minutes),
-        uint32(30 minutes),
-        uint32(1 hours),
-        uint32(2 hours),
-        uint32(4 hours),
-        uint32(8 hours),
-        uint32(16 hours),
-        uint32(1 days),
-        uint32(2 days),
-        uint32(4 days),
-        uint32(7 days)
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds),
+        uint32(1 seconds)
     ];
 
     ConcurrentHashMap constant hashmap = ConcurrentHashMap(0x81);
+    ConcurrentQueue constant queue = ConcurrentQueue(0x82);
     UUID constant uuidgen = UUID(0xa0);
+    System constant system = System(0xa1);
 
     /*** STORAGE ***/
 
@@ -100,11 +121,15 @@ contract KittyBase is KittyAccessControl, Seriality {
     ///  same contract handles both peer-to-peer sales as well as the gen0 sales which are
     ///  initiated every 15 minutes.
     SaleClockAuction public saleAuction;
+    uint256 balanceOfSaleAuction = 0;
 
     /// @dev The address of a custom ClockAution subclassed contract that handles siring
     ///  auctions. Needs to be separate from saleAuction because the actions taken on success
     ///  after a sales and siring auction are quite different.
     SiringClockAuction public siringAuction;
+    uint256 balanceOfSiringAuction = 0;
+
+    uint256 totalBalance = 0;
 
     constructor() public {
         /// @dev A mapping from cat IDs to the serialized Kitty struct.
@@ -123,6 +148,11 @@ contract KittyBase is KittyAccessControl, Seriality {
         ///  this Kitty for siring via breedWith(). Each Kitty can only have one approved
         ///  address for siring at any time. A zero value means no approval is outstanding.
         hashmap.create("sireAllowedToAddress", int32(ConcurrentLib.DataType.UINT256), int32(ConcurrentLib.DataType.ADDRESS));
+
+        // queue.create("balanceChangesOfSaleAuction", uint256(ConcurrentLib.DataType.UINT256));
+        // queue.create("balanceChangesOfSiringAuction", uint256(ConcurrentLib.DataType.UINT256));
+        // queue.create("totalBalanceChanges", uint256(ConcurrentLib.DataType.UINT256));
+        // system.createDefer("deferBalanceUpdate", "updateBalance(string)");
     }
 
     /// @dev Sets the reference to the sale auction.
@@ -151,12 +181,13 @@ contract KittyBase is KittyAccessControl, Seriality {
 
     /// @dev Assigns ownership of a specific Kitty to an address.
     function _transfer(address _from, address _to, uint256 _tokenId) internal {
-        // since the number of kittens is capped to 2^32
-        // there is no way to overflow this
-        if (_to == address(saleAuction)) {
-            // TODO
-        } else if (_to == address(siringAuction)) {
-            // TODO
+        bool balanceUpdated = false;
+        if (_to == address(saleAuction) && _to != address(0)) {
+            // queue.pushUint256("balanceChangesOfSaleAuction", 1);
+            balanceUpdated = true;
+        } else if (_to == address(siringAuction) && _to != address(0)) {
+            // queue.pushUint256("balanceChangesOfSiringAuction", 1);
+            balanceUpdated = true;
         } else {
             uint256 count = hashmap.getUint256("ownershipTokenCount", _to);
             count++;
@@ -169,9 +200,11 @@ contract KittyBase is KittyAccessControl, Seriality {
         // When creating new kittens _from is 0x0, but we can't account that address.
         if (_from != address(0)) {
             if (_from == address(saleAuction)) {
-                // TODO
+                // queue.pushUint256("balanceChangesOfSaleAuction", 0);
+                balanceUpdated = true;
             } else if (_from == address(siringAuction)) {
-                // TODO
+                // queue.pushUint256("balanceChangesOfSiringAuction", 0);
+                balanceUpdated = true;
             } else {
                 uint256 count = hashmap.getUint256("ownershipTokenCount", _from);
                 count--;
@@ -185,6 +218,10 @@ contract KittyBase is KittyAccessControl, Seriality {
         }
         // Emit the transfer event.
         emit Transfer(_from, _to, _tokenId);
+
+        if (balanceUpdated && !(_from == address(0) && _to == address(0))) {
+            // system.callDefer("deferBalanceUpdate");
+        }
     }
 
     /// @dev An internal method that creates a new kitty and stores it. This
@@ -233,6 +270,12 @@ contract KittyBase is KittyAccessControl, Seriality {
         // let's just be 100% sure we never let this happen.
         // TODO
         // require(newKittenId <= 4294967295);
+        if (_owner != address(0)) {
+            // queue.pushUint256("totalBalanceChanges", 1);
+        }
+        if (_owner != address(saleAuction) && _owner != address(siringAuction) && _owner != address(this)) {
+            // system.callDefer("deferBalanceUpdate");
+        }
 
         // emit the birth event
         emit Birth(
@@ -249,6 +292,37 @@ contract KittyBase is KittyAccessControl, Seriality {
 
         return newKittenId;
     }
+
+    // function updateBalance(string memory) public {
+    //     // uint256 length = queue.size("balanceChangesOfSaleAuction");
+    //     for (uint256 i = 0; i < length; i++) {
+    //         // uint256 changes = queue.popUint256("balanceChangesOfSaleAuction");
+    //         if (changes == 1) {
+    //             balanceOfSaleAuction++;
+    //         } else {
+    //             balanceOfSaleAuction--;
+    //         }
+    //     }
+    //     emit BalanceOf(address(saleAuction), balanceOfSaleAuction);
+
+    //     // length = queue.size("balanceChangesOfSiringAuction");
+    //     for (uint256 i = 0; i < length; i++) {
+    //         // uint256 changes = queue.popUint256("balanceOfChangesOfSiringAuction");
+    //         if (changes == 1) {
+    //             balanceOfSiringAuction++;
+    //         } else {
+    //             balanceOfSiringAuction--;
+    //         }
+    //     }
+    //     emit BalanceOf(address(siringAuction), balanceOfSiringAuction);
+
+    //     // length = queue.size("totalBalanceChanges");
+    //     for (uint256 i = 0; i < length; i++) {
+    //         // queue.popUint256("totalBalanceChanges");
+    //         totalBalance++;
+    //     }
+    //     emit BalanceOf(address(0), totalBalance);
+    // }
     
     function _kittyToBytes(Kitty memory _kitty) internal pure returns (bytes memory) {
         uint offset = 192;

@@ -30,16 +30,25 @@ db = mongo['parallelkitties']
 
 def buy_and_sale(accounts, n):
     # Buy 1 kitty for each account.
-    ret_set = db.saleauctions.aggregate([{'$sample': {'size': len(accounts)}}])
+    ret_set = db.saleauctions.aggregate([{'$sample': {'size': len(accounts)/2}}])
     targets = []
     for i in ret_set:
         targets.append(i)
-    #print(targets)
+    print(targets)
 
     txs = {}
     hashes = []
     for i in range(len(targets)):
-        raw_tx, tx_hash = accounts[i].sign(sale_auction_contract.functions.bid(targets[i]['id']).buildTransaction({
+        raw_tx, tx_hash = accounts[i*2].sign(sale_auction_contract.functions.bid(targets[i]['id']).buildTransaction({
+            'value': targets[i]['startingPrice'],
+            'gas': 1000000000,
+            'gasPrice': 1,
+            'nonce': n+i,
+        }))
+        txs[tx_hash] = raw_tx
+        hashes.append(tx_hash)
+
+        raw_tx, tx_hash = accounts[i*2+1].sign(sale_auction_contract.functions.bid(targets[i]['id']).buildTransaction({
             'value': targets[i]['startingPrice'],
             'gas': 1000000000,
             'gasPrice': 1,
@@ -53,19 +62,14 @@ def buy_and_sale(accounts, n):
     txs = {}
     idsToRemove = []
     receipts = wait_for_receipts(cli, hashes)
-    ok = 0
-    fail = 0
-    others = 0
     for i in range(len(accounts)):
         receipt = receipts[hashes[i]]
         if receipt['status'] != 1:
-            #print('bid kitty {} failed: {}'.format(targets[i], receipt))
-            fail += 1
+            print('bid kitty {} failed: {}'.format(targets[int(i/2)], receipt))
             continue
         processed_receipt = sale_auction_contract.processReceipt(receipt)
-        #print(processed_receipt)
+        print(processed_receipt)
         if 'AuctionSuccessful' in processed_receipt:
-            ok += 1
             idsToRemove.append(processed_receipt['AuctionSuccessful']['tokenId'])
             raw_tx, tx_hash = accounts[i].sign(kitty_core_contract.functions.createSaleAuction(
                 processed_receipt['AuctionSuccessful']['tokenId'],
@@ -79,15 +83,11 @@ def buy_and_sale(accounts, n):
                 'nonce': n+i,
             }))
             txs[tx_hash] = raw_tx
-        else:
-            print('sender = {}, tx hash = {}'.format(accounts[i].address(), hashes[i].hex()))
-            others += 1
 
         processed_receipt = kitty_core_contract.processReceipt(receipt)
-        #print(processed_receipt)
+        print(processed_receipt)
     cli.sendTransactions(txs)
     db.saleauctions.remove({'id': {'$in': idsToRemove}})
-    print('ok = {}, fail = {}, others = {}'.format(ok, fail, others))
 
     auctions = []
     receipts = wait_for_receipts(cli, list(txs.keys()))
@@ -96,7 +96,7 @@ def buy_and_sale(accounts, n):
             print('create sale auction failed: {}'.format(receipt))
             continue
         processed_receipt = sale_auction_contract.processReceipt(receipt)
-        #print(processed_receipt)
+        print(processed_receipt)
         if 'AuctionCreated' in processed_receipt:
             newAuction = {
                 'id': processed_receipt['AuctionCreated']['tokenId'],
@@ -108,9 +108,8 @@ def buy_and_sale(accounts, n):
     db.saleauctions.insert_many(auctions)
 
 users = init_accounts(private_key)
-n = 2000
+n = 2
 while True:
     buy_and_sale(users, n)
-    n += 2000
-    print(n)
-    #time.sleep(10)
+    n += 2
+    time.sleep(10)

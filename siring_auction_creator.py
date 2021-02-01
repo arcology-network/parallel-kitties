@@ -101,6 +101,7 @@ def create_siring_auction(accounts, kitties):
             }
             auctions.append(newAuction)
     db.siringauctions.insert_many(auctions)
+    print(auctions)
 
     # Wait for the sirings complete.
     # TODO
@@ -110,6 +111,7 @@ def create_siring_auction(accounts, kitties):
             if item is not None:
                 db.newborns.delete_one({'kittyId': item['kittyId']})
                 db.siringauctioncomplete.insert_one({'sireId': auction['id']})
+                print('auction complete')
                 break
             time.sleep(1)
 

@@ -1,5 +1,5 @@
-frontend: http://localhost:8080
-gen0_count: 1000
+frontend: http://192.168.1.111:8080
+gen0_count: 10
 test_case_weights:
     sale_auction: 1
     siring_auction_creator: 1

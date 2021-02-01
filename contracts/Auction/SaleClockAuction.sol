@@ -16,6 +16,7 @@ contract SaleClockAuction is ClockAuction {
     // Delegate constructor
     constructor(address _nftAddr, uint256 _cut) public
         ClockAuction(_nftAddr, _cut) {}
+        // {}
 
     /// @dev Creates and begins a new auction.
     /// @param _tokenId - ID of token to auction, sender must be owner.
@@ -61,11 +62,11 @@ contract SaleClockAuction is ClockAuction {
         _transfer(msg.sender, _tokenId);
 
         // If not a gen0 auction, exit
-        if (seller == address(nonFungibleContract)) {
+        // if (seller == address(nonFungibleContract)) {
             // Track gen0 sale prices
-            lastGen0SalePrices[gen0SaleCount % 5] = price;
-            gen0SaleCount++;
-        }
+            // lastGen0SalePrices[gen0SaleCount % 5] = price;
+            // gen0SaleCount++;
+        // }
     }
 
     function averageGen0SalePrice() public view returns (uint256) {

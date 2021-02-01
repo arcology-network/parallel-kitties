@@ -9,8 +9,7 @@ from pymongo import MongoClient
 frontend = sys.argv[1]
 kitty_core_address = sys.argv[2]
 sale_auction_address = sys.argv[3]
-siring_auction_address = sys.argv[4]
-private_key = sys.argv[5]
+private_key = sys.argv[4]
 
 cli = Cli(HTTPProvider(frontend))
 compiled_sol = compile_contracts('./contract')
@@ -26,18 +25,12 @@ sale_auction_contract = cli.eth.contract(
     address = sale_auction_address,
 )
 
-siring_auction = compiled_sol['./contract/Auction/SiringClockAuction.sol:SiringClockAuction']
-siring_auction_contract = cli.eth.contract(
-    abi = siring_auction['abi'],
-    address = siring_auction_address,
-)
-
 mongo = MongoClient('localhost', 32768)
 db = mongo['parallelkitties']
 
 def buy(accounts):
     # Buy 1 kitty for each account.
-    ret_set = db.saleauctions.aggregate([{'$sample': {'size': len(accounts)}}])
+    ret_set = db.saleauctions.aggregate([{'$sample': {'size': len(accounts)/3}}])
     targets = []
     for i in ret_set:
         targets.append(i)
@@ -64,58 +57,62 @@ def buy(accounts):
         processed_receipt = sale_auction_contract.processReceipt(receipt)
         if 'AuctionSuccessful' in processed_receipt:
             idsToRemove.append(processed_receipt['AuctionSuccessful']['tokenId'])
-
+    
     db.saleauctions.remove({'id': {'$in': idsToRemove}})
     return idsToRemove
 
-def bid_on_siring_auction(accounts, kitties):
-    # Find a sire for each matron we owned.
-    targets = []
-    while True:
-        ret_set = db.siringauctions.aggregate([{'$sample': {'size': len(accounts)}}])
-        for i in ret_set:
-            targets.append(i['id'])
-        if len(targets) == len(accounts):
-            break
-        time.sleep(3)
-        targets = []
-    
+def transfer(accounts, kitties, n):
+    count = len(kitties)
+    # print(count)
+    # print(kitties)
     txs = {}
-    for i in range(len(accounts)):
-        raw_tx, tx_hash = accounts[i].sign(kitty_core_contract.functions.bidOnSiringAuction(targets[i], kitties[i]).buildTransaction({
-            'value': int(1e15*2),
+    hashes = []
+    for i in range(count):
+        raw_tx, tx_hash = accounts[i].sign(kitty_core_contract.functions.transfer(
+            accounts[i+count].address(),
+            kitties[i],
+        ).buildTransaction({
+            'value': 0,
             'gas': 1000000000,
             'gasPrice': 1,
+            'nonce': n+1,
         }))
         txs[tx_hash] = raw_tx
-    
+        hashes.append(tx_hash)
+    for i in range(count):
+        raw_tx, tx_hash = accounts[i].sign(kitty_core_contract.functions.transfer(
+            accounts[i+count*2].address(),
+            kitties[i],
+        ).buildTransaction({
+            'value': 0,
+            'gas': 1000000000,
+            'gasPrice': 1,
+            'nonce': n+2,
+        }))
+        txs[tx_hash] = raw_tx
+        hashes.append(tx_hash)
     cli.sendTransactions(txs)
 
-    # Remove from siringauctions.
-    idsToRemove = []
-    receipts = wait_for_receipts(cli, list(txs.keys()))
-    for receipt in receipts.values():
+    ret_accounts = [0] * len(accounts)
+    receipts = wait_for_receipts(cli, hashes)
+    for i in range(len(hashes)):
+        receipt = receipts[hashes[i]]
         if receipt['status'] != 1:
+            ret_accounts[int(i/2+count)] = accounts[i+count]
+            print(receipt)
             continue
-        processed_receipt = siring_auction_contract.processReceipt(receipt)
-        if 'AuctionSuccessful' in processed_receipt:
-            idsToRemove.append(processed_receipt['AuctionSuccessful']['tokenId'])
+        processed_receipt = kitty_core_contract.processReceipt(receipt)
+        if 'Transfer' in processed_receipt:
+            ret_accounts[int(i/2)] = accounts[i+count]
+            ret_accounts[int(i/2+count*2)] = accounts[int(i/2)]
             print(processed_receipt)
-    db.siringauctions.remove({'id': {'$in': idsToRemove}})
-
-    # Wait for the sirings complete.
-    # TODO
-    for id in idsToRemove:
-        while True:
-            item = db.siringauctioncomplete.find_one({'sireId': id})
-            if item is not None:
-                db.siringauctioncomplete.delete_one({'sireId': id})
-                print(id)
-                break
-            time.sleep(1)
+    return ret_accounts, kitties
 
 users = init_accounts(private_key)
 kitties = buy(users)
+print(kitties)
+n=2
 while True:
-    bid_on_siring_auction(users, kitties)
+    users, kitties = transfer(users, kitties, n)
+    n += 2
     time.sleep(10)

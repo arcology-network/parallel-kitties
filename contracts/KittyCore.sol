@@ -61,7 +61,7 @@ contract KittyCore is KittyMinting {
         cooAddress = msg.sender;
 
         // start with the mythical kitten 0 - so we don't have generation-0 parent issues
-        // _createKitty(0, 0, 0, uint256(-1), address(0));
+        _createKitty(0, 0, 0, uint256(-1), address(0));
     }
 
     /// @dev Used to mark the smart contract as upgraded, in case there is a serious
@@ -123,7 +123,6 @@ contract KittyCore is KittyMinting {
     ///  to be set before contract can be unpaused. Also, we can't have
     ///  newContractAddress set either, because then the contract was upgraded.
     function unpause() public onlyCEO whenPaused {
-    // function unpause() public {
         require(address(saleAuction) != address(0));
         require(address(siringAuction) != address(0));
         require(address(geneScience) != address(0));

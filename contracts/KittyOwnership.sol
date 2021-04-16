@@ -62,13 +62,7 @@ contract KittyOwnership is KittyBase, ERC721 {
     /// @param _owner The owner address to check.
     /// @dev Required for ERC-721 compliance
     function balanceOf(address _owner) public view returns (uint256 count) {
-        if (_owner == address(saleAuction)) {
-            return balanceOfSaleAuction;
-        } else if (_owner == address(siringAuction)) {
-            return balanceOfSiringAuction;
-        } else {
-            return hashmap.getUint256("ownershipTokenCount", _owner);
-        }
+        return hashmap.getUint256("ownershipTokenCount", _owner);
     }
 
     /// @notice Transfers a Kitty to another address. If transferring to a smart
@@ -142,7 +136,9 @@ contract KittyOwnership is KittyBase, ERC721 {
     /// @notice Returns the total number of Kitties currently in existence.
     /// @dev Required for ERC-721 compliance.
     function totalSupply() public view returns (uint) {
-        return totalBalance;
+        // TODO
+        // return kitties.length - 1;
+        return 0;
     }
 
     /// @notice Returns the address currently assigned ownership of a given Kitty.

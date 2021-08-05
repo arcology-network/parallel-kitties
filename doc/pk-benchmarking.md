@@ -12,11 +12,11 @@ $ ./deploy.sh http://192.168.1.111:8080
 ## 1.2. Initialize test data
 
 ```shell
-$ ./send_init_txs.sh http://192.168.1.111:8080
+$ bash sendtxs.sh /data/pk_init_gen0_5m http://192.168.1.111:8080
 ```
 
 ## 1.3. Test Kitty Transfer
 
 ```shell
-$ ./send_pk_transfer_txs.sh http://192.168.1.111:8080
+$ bash sendtxs.sh /data/pk_kitty_transfer_2.5m/ http://192.168.1.111:8080
 ```

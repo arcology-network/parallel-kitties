@@ -11,7 +11,7 @@
 ## 1. Introduction
 
 ---
-The CryptoKitties is one of the most popular NFT application on Ethereum platform. The original version only allow sequential execution. We optimized the CryptoKitties using Arcology's concurrent library to allow concurrent exeuction and named it ParallelKitties.
+The CryptoKitties is one of the most popular NFT application on Ethereum platform. The original version only allow sequential execution. We optimized the CryptoKitties using Arcology's concurrent library to allow concurrent exeuction and named it ParallelKitties. 
 
 ## 2. Run the Test Scripts
 

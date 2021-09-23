@@ -8,7 +8,7 @@ real-world application written in Solidity with our concurrency control may achi
 
 ## **2. Easy Start**
 
-If you are only interested in trying Arcology testnet out without diving into specific technical details, [then please check this document out for an easier start.](./parallel-kitties-test-scripts.md)
+If you are only interested in trying Arcology testnet out without diving into specific technical details, [then please check this document out for an easy start.](./parallel-kitties-test-scripts.md)
 
 ## 3. Tests
 

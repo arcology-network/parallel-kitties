@@ -28,8 +28,10 @@ contract KittyMinting is KittyAuction {
         require(promoCreatedCount < promoCreationLimit);
         require(gen0CreatedCount < gen0CreationLimit);
 
+        /*
         promoCreatedCount++;
         gen0CreatedCount++;
+        */
         _createKitty(0, 0, 0, _genes, _owner);
     }
 
@@ -49,7 +51,9 @@ contract KittyMinting is KittyAuction {
             address(this)
         );
 
+        /*
         gen0CreatedCount++;
+        */
     }
 
     /// @dev Computes the next gen0 auction starting price, given

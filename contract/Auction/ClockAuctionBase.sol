@@ -1,12 +1,10 @@
 pragma solidity ^0.5.0;
 
 import "./../ERC721Draft.sol";
-import "./../ExternalInterfaces/ConcurrentLibInterface.sol";
-import "./../Seriality/Seriality.sol";
 
 /// @title Auction Core
 /// @dev Contains models, variables, and internal methods for the auction.
-contract ClockAuctionBase is Seriality {
+contract ClockAuctionBase {
 
     // Represents an auction on an NFT
     struct Auction {
@@ -30,16 +28,12 @@ contract ClockAuctionBase is Seriality {
     // Values 0-10,000 map to 0%-100%
     uint256 public ownerCut;
 
-    ConcurrentHashMap constant hashmap = ConcurrentHashMap(0x81);
+    // Map from token ID to their corresponding auction.
+    mapping (uint256 => Auction) tokenIdToAuction;
 
     event AuctionCreated(uint256 tokenId, uint256 startingPrice, uint256 endingPrice, uint256 duration);
     event AuctionSuccessful(uint256 tokenId, uint256 totalPrice, address winner);
     event AuctionCancelled(uint256 tokenId);
-
-    constructor() public {
-        // Map from token ID to their corresponding auction.
-        hashmap.create("tokenIdToAuction", int32(ConcurrentLib.DataType.UINT256), int32(ConcurrentLib.DataType.BYTES));
-    }
 
     /// @dev DON'T give me your money.
     function() external {}
@@ -90,8 +84,7 @@ contract ClockAuctionBase is Seriality {
         // at least one minute. (Keeps our math from getting hairy!)
         require(_auction.duration >= 1 minutes);
 
-        bytes memory auctionBytes = _auctionToBytes(_auction);
-        hashmap.set("tokenIdToAuction", _tokenId, auctionBytes);
+        tokenIdToAuction[_tokenId] = _auction;
         
         emit AuctionCreated(
             uint256(_tokenId),
@@ -115,8 +108,7 @@ contract ClockAuctionBase is Seriality {
         returns (uint256)
     {
         // Get a reference to the auction struct
-        bytes memory auctionBytes = hashmap.getBytes("tokenIdToAuction", _tokenId);
-        Auction memory auction = _bytesToAuction(auctionBytes);
+        Auction storage auction = tokenIdToAuction[_tokenId];
 
         // Explicitly check that this auction is currently live.
         // (Because of how Ethereum mappings work, we can't just count
@@ -165,12 +157,12 @@ contract ClockAuctionBase is Seriality {
     /// @dev Removes an auction from the list of open auctions.
     /// @param _tokenId - ID of NFT on auction.
     function _removeAuction(uint256 _tokenId) internal {
-        hashmap.deleteKey("tokenIdToAuction", _tokenId);
+        delete tokenIdToAuction[_tokenId];
     }
 
     /// @dev Returns true if the NFT is on auction.
     /// @param _auction - Auction to check.
-    function _isOnAuction(Auction memory _auction) internal pure returns (bool) {
+    function _isOnAuction(Auction storage _auction) internal view returns (bool) {
         return (_auction.startedAt > 0);
     }
 
@@ -178,7 +170,7 @@ contract ClockAuctionBase is Seriality {
     ///  functions (this one, that computes the duration from the auction
     ///  structure, and the other that does the price computation) so we
     ///  can easily test that the price computation works correctly.
-    function _currentPrice(Auction memory _auction)
+    function _currentPrice(Auction storage _auction)
         internal
         view
         returns (uint256)
@@ -252,33 +244,4 @@ contract ClockAuctionBase is Seriality {
         return _price * ownerCut / 10000;
     }
 
-    function _auctionToBytes(Auction memory _auction) internal pure returns (bytes memory) {
-        uint offset = 96;
-        bytes memory buffer = new bytes(offset);
-        uintToBytes(offset, _auction.startingPrice, buffer);
-        offset -= sizeOfUint(128);
-        uintToBytes(offset, _auction.endingPrice, buffer);
-        offset -= sizeOfUint(128);
-        addressToBytes(offset, _auction.seller, buffer);
-        offset -= sizeOfAddress();
-        uintToBytes(offset, _auction.duration, buffer);
-        offset -= sizeOfUint(64);
-        uintToBytes(offset, _auction.startedAt, buffer);
-        return buffer;
-    }
-
-    function _bytesToAuction(bytes memory data) internal pure returns (Auction memory) {
-        Auction memory auction;
-        uint offset = 96;
-        auction.startingPrice = bytesToUint128(offset, data);
-        offset -= sizeOfUint(128);
-        auction.endingPrice = bytesToUint128(offset, data);
-        offset -= sizeOfUint(128);
-        auction.seller = bytesToAddress(offset, data);
-        offset -= sizeOfAddress();
-        auction.duration = bytesToUint64(offset, data);
-        offset -= sizeOfUint(64);
-        auction.startedAt = bytesToUint64(offset, data);
-        return auction;
-    }
 }

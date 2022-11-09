@@ -2,10 +2,11 @@ pragma solidity ^0.5.0;
 
 import "./../ERC721Draft.sol";
 import "./ClockAuctionBase.sol";
-import "./../Zeppelin/Pausable.sol";
+import "../Zeppelin/Pausable.sol";
 
 /// @title Clock auction for non-fungible tokens.
 contract ClockAuction is Pausable, ClockAuctionBase {
+
     /// @dev Constructor creates a reference to the NFT ownership contract
     ///  and verifies the owner cut is in the valid range.
     /// @param _nftAddress - address of a deployed contract implementing
@@ -88,8 +89,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
     function cancelAuction(uint256 _tokenId)
         public
     {
-        bytes memory auctionBytes = hashmap.getBytes("tokenIdToAuction", _tokenId);
-        Auction memory auction = _bytesToAuction(auctionBytes);
+        Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
         address seller = auction.seller;
         require(msg.sender == seller);
@@ -105,8 +105,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
         onlyOwner
         public
     {
-        bytes memory auctionBytes = hashmap.getBytes("tokenIdToAuction", _tokenId);
-        Auction memory auction = _bytesToAuction(auctionBytes);
+        Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
         _cancelAuction(_tokenId, auction.seller);
     }
@@ -124,8 +123,7 @@ contract ClockAuction is Pausable, ClockAuctionBase {
         uint256 duration,
         uint256 startedAt
     ) {
-        bytes memory auctionBytes = hashmap.getBytes("tokenIdToAuction", _tokenId);
-        Auction memory auction = _bytesToAuction(auctionBytes);
+        Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
         return (
             auction.seller,
@@ -143,9 +141,9 @@ contract ClockAuction is Pausable, ClockAuctionBase {
         view
         returns (uint256)
     {
-        bytes memory auctionBytes = hashmap.getBytes("tokenIdToAuction", _tokenId);
-        Auction memory auction = _bytesToAuction(auctionBytes);
+        Auction storage auction = tokenIdToAuction[_tokenId];
         require(_isOnAuction(auction));
         return _currentPrice(auction);
     }
+
 }

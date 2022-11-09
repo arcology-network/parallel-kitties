@@ -1,5 +1,8 @@
 pragma solidity ^0.5.0;
 
+/// @title A facet of KittyCore that manages special access privileges.
+/// @author Axiom Zen (https://www.axiomzen.co)
+/// @dev See the KittyCore contract documentation to understand how the various contract facets are arranged.
 contract KittyAccessControl {
     // This facet controls access control for CryptoKitties. There are four roles managed here:
     //
@@ -92,7 +95,7 @@ contract KittyAccessControl {
         require(!paused);
         _;
     }
-    
+
     /// @dev Modifier to allow actions only when the contract IS paused
     modifier whenPaused {
         require(paused);

@@ -1,9 +1,6 @@
 pragma solidity ^0.5.0;
 
 import "./KittyBreeding.sol";
-import "./Auction/ClockAuction.sol";
-import "./Auction/SiringClockAuction.sol";
-import "./Auction/SaleClockAuction.sol";
 
 /// @title Handles creating auctions for sale and siring of kitties.
 ///  This wrapper of ReverseAuction exists only so that users can create
@@ -92,12 +89,11 @@ contract KittyAuction is KittyBreeding {
 
         // Siring auction will throw if the bid fails.
         siringAuction.bid.value(bidAmount)(_sireId);
-        _breedWith(_matronId, _sireId);
+        _breedWith(uint32(_matronId), uint32(_sireId));
 
         if (doAutoBirth) {
             // Auto birth fee provided, trigger autobirth event
-            bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-            Kitty memory matron = _bytesToKitty(matronBytes);
+            Kitty storage matron = kitties[_matronId];
             emit AutoBirth(_matronId, matron.cooldownEndTime);
         }
     }

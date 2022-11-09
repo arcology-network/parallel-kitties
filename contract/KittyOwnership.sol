@@ -23,19 +23,19 @@ contract KittyOwnership is KittyBase, ERC721 {
     // Internal utility functions: These functions all assume that their input arguments
     // are valid. We leave it to public methods to sanitize their inputs and follow
     // the required logic.
-    
+
     /// @dev Checks if a given address is the current owner of a particular Kitty.
     /// @param _claimant the address we are validating against.
     /// @param _tokenId kitten id, only valid when > 0
     function _owns(address _claimant, uint256 _tokenId) internal view returns (bool) {
-        return hashmap.getAddress("kittyIndexToOwner", _tokenId) == _claimant;
+        return kittyIndexToOwner[_tokenId] == _claimant;
     }
 
     /// @dev Checks if a given address currently has transferApproval for a particular Kitty.
     /// @param _claimant the address we are confirming kitten is approved for.
     /// @param _tokenId kitten id, only valid when > 0
     function _approvedFor(address _claimant, uint256 _tokenId) internal view returns (bool) {
-        return hashmap.getAddress("kittyIndexToApproved", _tokenId) == _claimant;
+        return kittyIndexToApproved[_tokenId] == _claimant;
     }
 
     /// @dev Marks an address as being approved for transferFrom(), overwriting any previous
@@ -44,7 +44,7 @@ contract KittyOwnership is KittyBase, ERC721 {
     ///  _approve() and transferFrom() are used together for putting Kitties on auction, and
     ///  there is no value in spamming the log with Approval events in that case.
     function _approve(uint256 _tokenId, address _approved) internal {
-        hashmap.set("kittyIndexToApproved", _tokenId, _approved);
+        kittyIndexToApproved[_tokenId] = _approved;
     }
 
     /// @dev Transfers a kitty owned by this contract to the specified address.
@@ -62,7 +62,16 @@ contract KittyOwnership is KittyBase, ERC721 {
     /// @param _owner The owner address to check.
     /// @dev Required for ERC-721 compliance
     function balanceOf(address _owner) public view returns (uint256 count) {
-        return hashmap.getUint256("ownershipTokenCount", _owner);
+        /*
+        return ownershipTokenCount[_owner];
+        */
+        if (_owner == address(saleAuction)) {
+            return balanceOfSaleAuction;
+        } else if (_owner == address(siringAuction)) {
+            return balanceOfSiringAuction;
+        } else {
+            return ownershipTokenCount[_owner];
+        }
     }
 
     /// @notice Transfers a Kitty to another address. If transferring to a smart
@@ -136,9 +145,10 @@ contract KittyOwnership is KittyBase, ERC721 {
     /// @notice Returns the total number of Kitties currently in existence.
     /// @dev Required for ERC-721 compliance.
     function totalSupply() public view returns (uint) {
-        // TODO
-        // return kitties.length - 1;
-        return 0;
+        /*
+        return kitties.length - 1;
+        */
+        return totalBalance;
     }
 
     /// @notice Returns the address currently assigned ownership of a given Kitty.
@@ -148,11 +158,12 @@ contract KittyOwnership is KittyBase, ERC721 {
         view
         returns (address owner)
     {
-        owner = hashmap.getAddress("kittyIndexToOwner", _tokenId);
+        owner = kittyIndexToOwner[_tokenId];
 
         require(owner != address(0));
     }
 
+    /*
     /// @notice Returns the nth Kitty assigned to an address, with n specified by the
     ///  _index argument.
     /// @param _owner The owner whose Kitties we are interested in.
@@ -167,17 +178,17 @@ contract KittyOwnership is KittyBase, ERC721 {
         view
         returns (uint256 tokenId)
     {
-        // TODO
-        // uint256 count = 0;
-        // for (uint256 i = 1; i <= totalSupply(); i++) {
-        //     if (kittyIndexToOwner[i] == _owner) {
-        //         if (count == _index) {
-        //             return i;
-        //         } else {
-        //             count++;
-        //         }
-        //     }
-        // }
-        // revert();
+        uint256 count = 0;
+        for (uint256 i = 1; i <= totalSupply(); i++) {
+            if (kittyIndexToOwner[i] == _owner) {
+                if (count == _index) {
+                    return i;
+                } else {
+                    count++;
+                }
+            }
+        }
+        revert();
     }
+    */
 }

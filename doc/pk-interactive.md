@@ -27,7 +27,7 @@ Traverse ～/contract directory，find all Solidity files and add to sources
 Check source code files
 ```Python
 >>> sources
-['./contract/KittyOwnership.sol', './contract/KittyMinting.sol', './contract/KittyAuction.sol', './contract/KittyBreeding.sol', './contract/ERC721Draft.sol', './contract/KittyBase.sol', './contract/KittyCore.sol', './contract/KittyAccessControl.sol', './contract/GeneScience.sol', './contract/ExternalInterfaces/ConcurrentLibInterface.sol', './contract/ExternalInterfaces/GeneScienceInterface.sol', './contract/Seriality/SizeOf.sol', './contract/Seriality/TypesToBytes.sol', './contract/Seriality/Seriality.sol', './contract/Seriality/BytesToTypes.sol', './contract/Auction/ClockAuctionBase.sol', './contract/Auction/SiringClockAuction.sol', './contract/Auction/SaleClockAuction.sol', './contract/Auction/ClockAuction.sol', './contract/Zeppelin/Pausable.sol', './contract/Zeppelin/Ownable.sol']
+['./contract/KittyOwnership.sol', './contract/KittyMinting.sol', './contract/KittyAuction.sol', './contract/KittyBreeding.sol', './contract/ERC721Draft.sol', './contract/KittyBase.sol', './contract/KittyCore.sol', './contract/KittyAccessControl.sol', './contract/GeneScience.sol', './contract/ExternalInterfaces/ConcurrentLibInterface.sol', './contract/ExternalInterfaces/GeneScienceInterface.sol', './contract/Auction/ClockAuctionBase.sol', './contract/Auction/SiringClockAuction.sol', './contract/Auction/SaleClockAuction.sol', './contract/Auction/ClockAuction.sol', './contract/Zeppelin/Pausable.sol', './contract/Zeppelin/Ownable.sol']
 
 ```
 Initialize an ammolite client connecting to the frontend of a node cluster

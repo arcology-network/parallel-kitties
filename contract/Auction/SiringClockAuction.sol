@@ -53,9 +53,7 @@ contract SiringClockAuction is ClockAuction {
         payable
     {
         require(msg.sender == address(nonFungibleContract));
-        bytes memory auctionBytes = hashmap.getBytes("tokenIdToAuction", _tokenId);
-        Auction memory auction = _bytesToAuction(auctionBytes);
-        address seller = auction.seller;
+        address seller = tokenIdToAuction[_tokenId].seller;
         // _bid checks that token ID is valid and will throw if bid fails
         _bid(_tokenId, msg.value);
         // We transfer the kitty back to the seller, the winner will get

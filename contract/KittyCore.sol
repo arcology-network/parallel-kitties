@@ -60,8 +60,10 @@ contract KittyCore is KittyMinting {
         // the creator of the contract is also the initial COO
         cooAddress = msg.sender;
 
+        /*
         // start with the mythical kitten 0 - so we don't have generation-0 parent issues
         _createKitty(0, 0, 0, uint256(-1), address(0));
+        */
     }
 
     /// @dev Used to mark the smart contract as upgraded, in case there is a serious
@@ -103,8 +105,7 @@ contract KittyCore is KittyMinting {
         uint256 generation,
         uint256 genes
     ) {
-        bytes memory kittyBytes = hashmap.getBytes("kitties", _id);
-        Kitty memory kit = _bytesToKitty(kittyBytes);
+        Kitty storage kit = kitties[_id];
 
         // if this variable is 0 then it's not gestating
         isGestating = (kit.siringWithId != 0);

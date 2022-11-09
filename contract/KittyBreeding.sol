@@ -53,19 +53,18 @@ contract KittyBreeding is KittyOwnership {
     ///  and matron have the same owner, or if the sire has given siring permission to
     ///  the matron's owner (via approveSiring()).
     function _isSiringPermitted(uint256 _sireId, uint256 _matronId) internal view returns (bool) {
-        address matronOwner = hashmap.getAddress("kittyIndexToOwner", _matronId);
-        address sireOwner = hashmap.getAddress("kittyIndexToOwner", _sireId);
+        address matronOwner = kittyIndexToOwner[_matronId];
+        address sireOwner = kittyIndexToOwner[_sireId];
 
         // Siring is okay if they have same owner, or if the matron's owner was given
         // permission to breed with this sire.
-        return (matronOwner == sireOwner || hashmap.getAddress("sireAllowedToAddress", _sireId) == matronOwner);
+        return (matronOwner == sireOwner || sireAllowedToAddress[_sireId] == matronOwner);
     }
 
     /// @dev Set the cooldownEndTime for the given Kitty, based on its current cooldownIndex.
     ///  Also increments the cooldownIndex (unless it has hit the cap).
-    function _triggerCooldown(uint256 _kittenId) internal {
-        bytes memory kittyBytes = hashmap.getBytes("kitties", _kittenId);
-        Kitty memory _kitten = _bytesToKitty(kittyBytes);
+    /// @param _kitten A reference to the Kitty in storage which needs its timer started.
+    function _triggerCooldown(Kitty storage _kitten) internal {
         // Compute the end of the cooldown time (based on current cooldownIndex)
         _kitten.cooldownEndTime = uint64(now + cooldowns[_kitten.cooldownIndex]);
 
@@ -75,8 +74,6 @@ contract KittyBreeding is KittyOwnership {
         if (_kitten.cooldownIndex < 13) {
             _kitten.cooldownIndex += 1;
         }
-        kittyBytes = _kittyToBytes(_kitten);
-        hashmap.set("kitties", _kittenId, kittyBytes);
     }
 
     /// @notice Grants approval to another user to sire with one of your Kitties.
@@ -88,7 +85,7 @@ contract KittyBreeding is KittyOwnership {
         whenNotPaused
     {
         require(_owns(msg.sender, _sireId));
-        hashmap.set("sireAllowedToAddress", _sireId, _addr);
+        sireAllowedToAddress[_sireId] = _addr;
     }
 
     /// @dev Updates the minimum payment required for calling giveBirthAuto(). Can only
@@ -113,8 +110,7 @@ contract KittyBreeding is KittyOwnership {
         returns (bool)
     {
         require(_kittyId > 0);
-        bytes memory kittyBytes = hashmap.getBytes("kitties", _kittyId);
-        Kitty memory kit = _bytesToKitty(kittyBytes);
+        Kitty storage kit = kitties[_kittyId];
         return _isReadyToBreed(kit);
     }
 
@@ -125,13 +121,13 @@ contract KittyBreeding is KittyOwnership {
     /// @param _sire A reference to the Kitty struct of the potential sire.
     /// @param _sireId The sire's ID
     function _isValidMatingPair(
-        Kitty memory _matron,
+        Kitty storage _matron,
         uint256 _matronId,
-        Kitty memory _sire,
+        Kitty storage _sire,
         uint256 _sireId
     )
         private
-        pure
+        view
         returns(bool)
     {
         // A Kitty can't breed with itself!
@@ -172,10 +168,8 @@ contract KittyBreeding is KittyOwnership {
         view
         returns (bool)
     {
-        bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-        Kitty memory matron = _bytesToKitty(matronBytes);
-        bytes memory sireBytes = hashmap.getBytes("kitties", _sireId);
-        Kitty memory sire = _bytesToKitty(sireBytes);
+        Kitty storage matron = kitties[_matronId];
+        Kitty storage sire = kitties[_sireId];
         return _isValidMatingPair(matron, _matronId, sire, _sireId);
     }
 
@@ -192,10 +186,8 @@ contract KittyBreeding is KittyOwnership {
     {
         require(_matronId > 0);
         require(_sireId > 0);
-        bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-        Kitty memory matron = _bytesToKitty(matronBytes);
-        bytes memory sireBytes = hashmap.getBytes("kitties", _sireId);
-        Kitty memory sire = _bytesToKitty(sireBytes);
+        Kitty storage matron = kitties[_matronId];
+        Kitty storage sire = kitties[_sireId];
         return _isValidMatingPair(matron, _matronId, sire, _sireId) &&
             _isSiringPermitted(_sireId, _matronId);
     }
@@ -226,15 +218,13 @@ contract KittyBreeding is KittyOwnership {
         require(_isSiringPermitted(_sireId, _matronId));
 
         // Grab a reference to the potential matron
-        bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-        Kitty memory matron = _bytesToKitty(matronBytes);
+        Kitty storage matron = kitties[_matronId];
 
         // Make sure matron isn't pregnant, or in the middle of a siring cooldown
         require(_isReadyToBreed(matron));
 
         // Grab a reference to the potential sire
-        bytes memory sireBytes = hashmap.getBytes("kitties", _sireId);
-        Kitty memory sire = _bytesToKitty(sireBytes);
+        Kitty storage sire = kitties[_sireId];
 
         // Make sure sire isn't pregnant, or in the middle of a siring cooldown
         require(_isReadyToBreed(sire));
@@ -254,25 +244,24 @@ contract KittyBreeding is KittyOwnership {
     /// @dev Internal utility function to initiate breeding, assumes that all breeding
     ///  requirements have been checked.
     function _breedWith(uint256 _matronId, uint256 _sireId) internal {
+        // Grab a reference to the Kitties from storage.
+        Kitty storage sire = kitties[_sireId];
+        Kitty storage matron = kitties[_matronId];
+
         // Mark the matron as pregnant, keeping track of who the sire is.
-        bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-        Kitty memory matron = _bytesToKitty(matronBytes);
         matron.siringWithId = _sireId;
 
-        matronBytes = _kittyToBytes(matron);
-        hashmap.set("kitties", _matronId, matronBytes);
-
         // Trigger the cooldown for both parents.
-        _triggerCooldown(_sireId);
-        _triggerCooldown(_matronId);
+        _triggerCooldown(sire);
+        _triggerCooldown(matron);
 
         // Clear siring permission for both parents. This may not be strictly necessary
         // but it's likely to avoid confusion!
-        hashmap.deleteKey("sireAllowedToAddress", _matronId);
-        hashmap.deleteKey("sireAllowedToAddress", _sireId);
+        delete sireAllowedToAddress[_matronId];
+        delete sireAllowedToAddress[_sireId];
 
         // Emit the pregnancy event.
-        emit Pregnant(hashmap.getAddress("kittyIndexToOwner", _matronId), _matronId, _sireId);
+        emit Pregnant(kittyIndexToOwner[_matronId], _matronId, _sireId);
     }
 
     /// @notice Works like breedWith(), but includes a pre-payment of the gas required to call
@@ -294,8 +283,7 @@ contract KittyBreeding is KittyOwnership {
 
         // Emit an AutoBirth message so the autobirth daemon knows when and for what cat to call
         // giveBirth().
-        bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-        Kitty memory matron = _bytesToKitty(matronBytes);
+        Kitty storage matron = kitties[_matronId];
         emit AutoBirth(_matronId, matron.cooldownEndTime);
     }
 
@@ -313,8 +301,7 @@ contract KittyBreeding is KittyOwnership {
         returns(uint256)
     {
         // Grab a reference to the matron in storage.
-        bytes memory matronBytes = hashmap.getBytes("kitties", _matronId);
-        Kitty memory matron = _bytesToKitty(matronBytes);
+        Kitty storage matron = kitties[_matronId];
 
         // Check that the matron is a valid cat.
         require(matron.birthTime != 0);
@@ -324,8 +311,7 @@ contract KittyBreeding is KittyOwnership {
 
         // Grab a reference to the sire in storage.
         uint256 sireId = matron.siringWithId;
-        bytes memory sireBytes = hashmap.getBytes("kitties", sireId);
-        Kitty memory sire = _bytesToKitty(sireBytes);
+        Kitty storage sire = kitties[sireId];
 
         // Determine the higher generation number of the two parents
         uint16 parentGen = matron.generation;
@@ -334,17 +320,15 @@ contract KittyBreeding is KittyOwnership {
         }
 
         // Call the sooper-sekret, sooper-expensive, gene mixing operation.
-        uint256 childGenes = geneScience.mixGenes(matron.genes, sire.genes, 0);
+        uint256 childGenes = geneScience.mixGenes(matron.genes, sire.genes);
 
         // Make the new kitten!
-        address owner = hashmap.getAddress("kittyIndexToOwner", _matronId);
+        address owner = kittyIndexToOwner[_matronId];
         uint256 kittenId = _createKitty(_matronId, matron.siringWithId, parentGen + 1, childGenes, owner);
 
         // Clear the reference to sire from the matron (REQUIRED! Having siringWithId
         // set is what marks a matron as being pregnant.)
-        matron.siringWithId = 0;
-        matronBytes = _kittyToBytes(matron);
-        hashmap.set("kitties", _matronId, matronBytes);
+        delete matron.siringWithId;
 
         // return the new kitten's ID
         return kittenId;

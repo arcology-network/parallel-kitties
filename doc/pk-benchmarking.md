@@ -1,22 +1,27 @@
 # 1. Benchmarking Scripts
 
-## 1.1. Deployment
+This document shows you how to benchmark Arcology Network using the parallelized CryptoKitties.
 
-> In the following examples, we suppose the frontend service was deployed at http://192.168.1.111:8080, replace it if necessary.
+## 1.1. Deploy Smart Contracts
+
+Let's suppose an Arcology node is running at http://192.168.1.111. In the Ammolite docker image, execute the command below.
+Replace the IP address if necessary.
 
 ```shell
 $ cd ~/parallel_kitties
 $ ./deploy.sh http://192.168.1.111:8080
 ```
 
-## 1.2. Initialize test data
+## 1.2. Generate 2M Owners
+
+The command above calls `sendtxs.py` to load a pre-generated transaction file and then send them to the Arcology testnet through port `8080`. -->
 
 ```shell
-$ bash sendtxs.sh /data/pk_init_gen0_5m http://192.168.1.111:8080
+>python sendtxs.py http://192.168.1.106:8080 data/pk_init_gen0/pk_init_gen0_2m_01.out
 ```
 
-## 1.3. Test Kitty Transfer
+## 1.3. Transfer 1M Kitties
 
 ```shell
-$ bash sendtxs.sh /data/pk_kitty_transfer_2.5m/ http://192.168.1.111:8080
+>python sendtxs.py http://192.168.1.106:8080 data/pk_kitty_transfer/pk_kitty_transfer_1m_01.dat
 ```

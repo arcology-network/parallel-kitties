@@ -56,7 +56,7 @@ Run kitty_miner.py before starting all the other tests:
 $ python3 kitty_miner.py http://localhost:8080 0x110f04e4690b504638ef281a8e190b00aedf1153 42e30ad7f9b7ccb4c19d14277c76c15fddc461548be3102dcb4bbfd7b602c07a
 ```
 
-### Deploy
+### Deployment
 
 Copy the output of deploy.py to terminal to run the tests:
 

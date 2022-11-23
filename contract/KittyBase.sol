@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 import "./KittyAccessControl.sol";
 import "./Auction/SaleClockAuction.sol";
 import "./Auction/SiringClockAuction.sol";
-import "./ExternalInterfaces/ConcurrentLibInterface.sol";
+import "./ExternalInterfaces/ConcurrentLib.sol";
 
 /// @title Base contract for CryptoKitties. Holds all common structs, events and base variables.
 /// @author Axiom Zen (https://www.axiomzen.co)
@@ -184,19 +184,25 @@ contract KittyBase is KittyAccessControl {
         siringAuction = candidateContract;
     }
 
-    DynamicArray constant darray = DynamicArray(0x84);
-    UUID constant uuid = UUID(0xa0);
-    System constant system = System(0xa1);
-
     uint256 balanceOfSaleAuction = 0;
     uint256 balanceOfSiringAuction = 0;
     uint256 totalBalance = 0;
 
+    using Concurrency for Concurrency.Array;
+    using Concurrency for Concurrency.Deferred;
+    using Concurrency for Concurrency.Util;
+
+    Concurrency.Array balanceChangesOfSaleAuction;
+    Concurrency.Array balanceChangesOfSiringAuction;
+    Concurrency.Array totalBalanceChanges;
+    Concurrency.Deferred deferBalanceUpdate;
+    Concurrency.Util util;
+
     constructor() public {
-        darray.create("balanceChangesOfSaleAuction", uint256(ConcurrentLib.DataType.UINT256));
-        darray.create("balanceChangesOfSiringAuction", uint256(ConcurrentLib.DataType.UINT256));
-        darray.create("totalBalanceChanges", uint256(ConcurrentLib.DataType.UINT256));
-        system.createDefer("deferBalanceUpdate", "updateBalance(string)");
+        balanceChangesOfSaleAuction.Init("balanceChangesOfSaleAuction", Concurrency.DataType.UINT256);
+        balanceChangesOfSiringAuction.Init("balanceChangesOfSiringAuction", Concurrency.DataType.UINT256);
+        totalBalanceChanges.Init("totalBalanceChanges", Concurrency.DataType.UINT256);
+        deferBalanceUpdate.Init("deferBalanceUpdate", "updateBalance(string)");
     }
     /* ---------- */
 
@@ -209,10 +215,10 @@ contract KittyBase is KittyAccessControl {
         */
         bool balanceUpdated = false;
         if (_to == address(saleAuction) && _to != address(0)) {
-            // darray.pushBack("balanceChangesOfSaleAuction", 1);
+            // balanceChangesOfSaleAuction.PushBack(1);
             balanceUpdated = true;
         } else if (_to == address(siringAuction) && _to != address(0)) {
-            // darray.pushBack("balanceChangesOfSiringAuction", 1);
+            // balanceChangesOfSiringAuction.PushBack(1);
             balanceUpdated = true;
         } else {
             ownershipTokenCount[_to]++;
@@ -226,10 +232,10 @@ contract KittyBase is KittyAccessControl {
             ownershipTokenCount[_from]--;
             */
             if (_from == address(saleAuction)) {
-                // darray.pushBack("balanceChangesOfSaleAuction", 0);
+                // balanceChangesOfSaleAuction.PushBack(0);
                 balanceUpdated = true;
             } else if (_from == address(siringAuction)) {
-                // darray.pushBack("balanceChangesOfSiringAuction", 0);
+                // balanceChangesOfSiringAuction.PushBack(0);
                 balanceUpdated = true;
             } else {
                 ownershipTokenCount[_from]--;
@@ -244,7 +250,7 @@ contract KittyBase is KittyAccessControl {
         emit Transfer(_from, _to, _tokenId);
 
         // if (balanceUpdated && !(_from == address(0) && _to == address(0))) {
-        //     system.callDefer("deferBalanceUpdate");
+        //     deferBalanceUpdate.Call();
         // }
     }
 
@@ -302,12 +308,12 @@ contract KittyBase is KittyAccessControl {
             cooldownIndex: 0,
             generation: uint16(_generation)
         });
-        uint256 newKittenId = uuid.gen("kittyId");
+        uint256 newKittenId = util.GenUUID("kittyId");
         kitties[newKittenId] = _kitty;
 
-        // darray.pushBack("totalBalanceChanges", 1);
+        // totalBalanceChanges.PushBack(1);
         // if (_owner != address(saleAuction) && _owner != address(siringAuction)) {
-        //     system.callDefer("deferBalanceUpdate");
+        //     deferBalanceUpdate.Call();
         // }
 
         // emit the birth event
@@ -327,9 +333,9 @@ contract KittyBase is KittyAccessControl {
     }
 
     function updateBalance(string memory) public {
-        uint256 length = darray.length("balanceChangesOfSaleAuction");
+        uint256 length = balanceChangesOfSaleAuction.Length();
         for (uint256 i = 0; i < length; i++) {
-            uint256 changes = darray.popFrontUint256("balanceChangesOfSaleAuction");
+            uint256 changes = balanceChangesOfSaleAuction.PopFrontUint256();
             if (changes == 1) {
                 balanceOfSaleAuction++;
             } else {
@@ -340,10 +346,9 @@ contract KittyBase is KittyAccessControl {
             emit BalanceOf(address(saleAuction), balanceOfSaleAuction);
         }
         
-
-        length = darray.length("balanceChangesOfSiringAuction");
+        length = balanceChangesOfSiringAuction.Length();
         for (uint256 i = 0; i < length; i++) {
-            uint256 changes = darray.popFrontUint256("balanceOfChangesOfSiringAuction");
+            uint256 changes = balanceChangesOfSiringAuction.PopFrontUint256();
             if (changes == 1) {
                 balanceOfSiringAuction++;
             } else {
@@ -354,10 +359,9 @@ contract KittyBase is KittyAccessControl {
             emit BalanceOf(address(siringAuction), balanceOfSiringAuction);
         }
         
-
-        length = darray.length("totalBalanceChanges");
+        length = totalBalanceChanges.Length();
         for (uint256 i = 0; i < length; i++) {
-            darray.popFrontUint256("totalBalanceChanges");
+            totalBalanceChanges.PopFrontUint256();
             totalBalance++;
         }
         if (length != 0) {
